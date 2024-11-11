@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
 
-registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
   const params = req.body;
 
   // Form validation
@@ -10,7 +10,7 @@ registerUser = async (req, res) => {
       message: "You can't leave empty fields",
     });
   }
-  
+
   try {
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -39,20 +39,63 @@ registerUser = async (req, res) => {
       user: create_user,
     });
   } catch (error) {
-    console.error(error); 
+    console.error(error);
     return res.status(500).send({
       message: "Error creating user.",
       error,
     });
   }
-
-
 };
 
-Login  = async (req, res) => {
-    
-}
+const login = async (req, res) => {
+  const params = req.body;
+
+  if (!params.username || !params.password) {
+    return res.status(400).send({
+      message: "You can't leave empty fields",
+    });
+  }
+
+  try {
+    // Busca al usuario solo por el nombre de usuario
+    const checkUser = await User.findOne({ username: params.username }).select({ "image": 0 });
+
+    // Si no se encuentra el usuario, devuelve un mensaje de error
+    if (!checkUser) {
+      return res.status(400).send({
+        message: "Incorrect user or password.",
+      });
+    }
+
+    // Verifica la contraseña con bcrypt
+    const match = await bcrypt.compare(params.password, checkUser.password);
+
+    if (!match) {
+      // Si la contraseña es incorrecta, devuelve un mensaje de error
+      return res.status(400).send({
+        message: "Incorrect user or password.",
+      });
+    }
+
+    // Si la contraseña es correcta, devuelve el usuario
+    const user = checkUser.toObject();
+    delete user.password; //  elimina la contraseña del objeto usuario para mayor seguridad
+
+    return res.status(200).send({
+      status: "success",
+      message: "Welcome, " + user.username,
+      user,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({
+      message: "Error logging in.",
+      error,
+    });
+  }
+};
 
 module.exports = {
   registerUser,
+  login,
 };
