@@ -1,5 +1,18 @@
 const bcrypt = require("bcrypt");
+// importar modelo
 const User = require("../models/user");
+// importar servicios
+const jwt = require("../services/jwt");
+const createToken = require("../services/jwt");
+const mongoosePagination = require("mongoose-pagination")
+
+
+const pruebaUser = (req, res) => {
+    return res.status(200).send({
+      message: "estas en users",
+      usuario : req.user
+    })
+}
 
 const registerUser = async (req, res) => {
   const params = req.body;
@@ -81,10 +94,14 @@ const login = async (req, res) => {
     const user = checkUser.toObject();
     delete user.password; //  elimina la contraseña del objeto usuario para mayor seguridad
 
+    //obtener el token
+    const token = jwt.createToken(user)
+
     return res.status(200).send({
       status: "success",
       message: "Welcome, " + user.username,
       user,
+      token
     });
   } catch (error) {
     console.error(error);
@@ -95,7 +112,52 @@ const login = async (req, res) => {
   }
 };
 
+const profile = async (req, res) => {
+  //obtener el id del user
+  const id = req.params.id;
+
+  //consulta para sacar los datos
+  const userProfile = await User.findById(id).select({
+    password:0, 
+    username:0,
+    role:0
+  })
+    
+  if(!userProfile){
+      return res.status(404).send({
+        status : "error",
+        message: "user doesn't exist or there is an error."
+      });
+    }
+
+    return res.status(200).send({
+      status: "success",
+      message : "showing profile. . .",
+      user: userProfile
+    })  
+  }
+
+
+  const listUsers = (req, res) => {
+
+    let page = 1;
+    if(req.params.page){
+      page = req.params.page
+    }
+
+    page = parseInt(page)
+
+    return res.status(200).send({
+      status: "success",
+      message : "users list:",
+      page
+    })
+  }
+  
 module.exports = {
   registerUser,
+  pruebaUser,
   login,
+  profile,
+  listUsers
 };
